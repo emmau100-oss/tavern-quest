@@ -4,7 +4,7 @@
 .questdrop summary{cursor:pointer;padding:13px 14px;font-weight:800;color:#f2cf88;display:flex;justify-content:space-between;align-items:center;list-style:none}
 .questdrop summary::-webkit-details-marker{display:none}.questdrop summary:after{content:'▾';color:#c79a55}.questdrop[open] summary:after{content:'▴'}
 .questdropbody{padding:0 10px 10px}.questcount{font-size:11px;color:#a99779;font-weight:400}
-</style></head><body><main><div class="ey">Two-player household RPG</div><h1>🍺 Tavern Quest</h1><p>Chores make you stronger. Walking carries you to the next danger.</p><div class="soundbar"><button class="soundbtn" id="soundToggle" onclick="toggleSound()">🔊 Sound Effects</button><button class="soundbtn" id="ambienceToggle" onclick="toggleAmbience()">🎻 Tavern Music</button><button class="soundbtn" onclick="connectShared()">☁️ Shared Save: <span id="sharedBadge">Not connected</span></button><button class="soundbtn" onclick="disconnectShared()">Disconnect</button><span class="soundnote">Music begins after your first tap on iPhone.</span></div><div class="nav" id="nav"></div><div id="view"></div></main><script>
+</style></head><body><main><div class="ey">Two-player household RPG</div><h1>🍺 Tavern Quest</h1><p>Chores make you stronger. Walking carries you to the next danger.</p><div class="soundbar"><button class="soundbtn" id="soundToggle" onclick="toggleSound()">🔊 Sound Effects</button><button class="soundbtn" id="ambienceToggle" onclick="toggleAmbience()">🎶 Happy Tavern Music</button><button class="soundbtn" onclick="connectShared()">☁️ Shared Save: <span id="sharedBadge">Not connected</span></button><button class="soundbtn" onclick="disconnectShared()">Disconnect</button><span class="soundnote">Happy tavern music begins after your first tap on iPhone.</span></div><div class="nav" id="nav"></div><div id="view"></div></main><script>
 const C={Tank:{p:'Bulwark',d:'+30% HP and reduced damage.',hp:1.3,a:1,heal:1},Healer:{p:'Second Wind',d:'Recover more health after battles.',hp:1,a:.9,heal:1.35},Rogue:{p:'Lucky Find',d:'Higher critical-hit and rare-loot chance.',hp:.95,a:1.15,heal:1},Wizard:{p:'Arcane Focus',d:'Spells deal extra damage.',hp:.85,a:.95,heal:1},Ranger:{p:'Pack Bond',d:'Companion abilities are stronger.',hp:1,a:1.05,heal:1},Paladin:{p:'Radiant Guard',d:'Balanced defense with a block chance.',hp:1.15,a:1.05,heal:1.1}};
 const P=[['Poe','Loyal Guardian','Blocks attacks'],['Hobie','Tracker of Trails','Improves loot'],['Odin','Steadfast Sentinel','Raises defense'],['Ted','Ironheart','Adds physical power'],['Cloud','Arcane Familiar','Boosts spells'],['Dozer','The Fearless','May strike twice'],['Trousers','Trail Trickster','Improves dodge'],['Bobby','Quickpaw','Acts quickly'],['Boogie','Lucky Paw','May find bonus loot'],['Edgar','Tiny Terror','May interrupt enemies'],['Cheese','Golden Nose','Finds treasure'],['Barriss','Young Vanguard','Scales with the party']];
 const I={"Rusty Longsword":['weapon',1],"Iron Shortsword":['weapon',2],"Silvered Dagger":['weapon',3],"Oak Wand":['weapon',2],"Traveler’s Cloak":['armor',1],"Leather Bracers":['armor',2],"Magic Missile":['spell',3],"Cure Wounds":['spell',3],"Burning Hands":['spell',4],"Scroll of Shielding":['spell',2]};
@@ -196,12 +196,34 @@ case'boss':tone(98,.22,'sawtooth',.04);tone(123,.25,'sawtooth',.035,.2);tone(82,
 case'companion':tone(523,.12,'triangle',.04);tone(659,.12,'triangle',.04,.1);tone(784,.12,'triangle',.04,.2);tone(1047,.35,'sine',.04,.32);break;
 case'inn':tone(330,.14,'sine',.03);tone(392,.18,'sine',.03,.13);tone(494,.3,'sine',.025,.28);break;
 }}
-function stopAmbience(){if(musicTimer){clearInterval(musicTimer);musicTimer=null}ambienceNodes.forEach(n=>{try{n.stop?.();n.disconnect?.()}catch(e){}});ambienceNodes=[]}
+const TAVERN_TRACK='https://opengameart.org/sites/default/files/Minstrel_Dance_0.mp3';
+let tavernAudio=null;
+function getTavernAudio(){
+ if(!tavernAudio){
+   tavernAudio=new Audio(TAVERN_TRACK);
+   tavernAudio.loop=true;
+   tavernAudio.preload='auto';
+   tavernAudio.volume=.32;
+ }
+ return tavernAudio;
+}
 function playMusicPhrase(){return}
-function startAmbience(){stopAmbience()}
-function updateSoundUI(){let a=document.getElementById('soundToggle'),b=document.getElementById('ambienceToggle');if(a){a.classList.toggle('on',!!S.soundOn);a.textContent=S.soundOn?'🔊 Effects On':'🔇 Effects Off'}if(b){b.classList.toggle('on',!!S.ambienceOn);b.textContent=S.ambienceOn?'🎶 Happy Music (track needed)':'🎶 Music Off'}}
+function startAmbience(){
+ if(!S.ambienceOn)return;
+ stopAmbience();
+ let a=getTavernAudio();
+ a.play().catch(()=>{});
+}
+function stopAmbience(){
+ if(musicTimer){clearInterval(musicTimer);musicTimer=null}
+ ambienceNodes.forEach(n=>{try{n.stop?.();n.disconnect?.()}catch(e){}});
+ ambienceNodes=[];
+ if(tavernAudio){try{tavernAudio.pause()}catch(e){}}
+}
+function updateSoundUI(){let a=document.getElementById('soundToggle'),b=document.getElementById('ambienceToggle');if(a){a.classList.toggle('on',!!S.soundOn);a.textContent=S.soundOn?'🔊 Effects On':'🔇 Effects Off'}if(b){b.classList.toggle('on',!!S.ambienceOn);b.textContent=S.ambienceOn?'🎶 Happy Music On':'🎶 Music Off'}}
 function toggleSound(){S.soundOn=!S.soundOn;if(S.soundOn)sfx('click');save();updateSoundUI()}
-function toggleAmbience(){S.ambienceOn=!S.ambienceOn;stopAmbience();save();updateSoundUI()}
+function toggleAmbience(){S.ambienceOn=!S.ambienceOn;if(S.ambienceOn)startAmbience();else stopAmbience();save();updateSoundUI()}
+document.addEventListener('pointerdown',()=>{if(S.ambienceOn)startAmbience()},{once:true});
 
 
 const FITNESS_URL='https://ilmjnptsepcztzwnvrap.supabase.co/functions/v1/tavern-fitness';
