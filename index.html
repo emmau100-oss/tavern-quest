@@ -197,23 +197,12 @@ case'companion':tone(523,.12,'triangle',.04);tone(659,.12,'triangle',.04,.1);ton
 case'inn':tone(330,.14,'sine',.03);tone(392,.18,'sine',.03,.13);tone(494,.3,'sine',.025,.28);break;
 }}
 function stopAmbience(){if(musicTimer){clearInterval(musicTimer);musicTimer=null}ambienceNodes.forEach(n=>{try{n.stop?.();n.disconnect?.()}catch(e){}});ambienceNodes=[]}
-function playMusicPhrase(){
- if(!S.ambienceOn)return;
- // Cheerful major-key tavern jig: bright melody only, no ominous bass or drone.
- const tune=[523.25,659.25,783.99,659.25,698.46,783.99,880,783.99,659.25,698.46,783.99,1046.5,987.77,880,783.99,659.25,
- 523.25,587.33,659.25,783.99,880,783.99,698.46,659.25];
- const thirds=[659.25,783.99,987.77,783.99,880,987.77,1046.5,987.77];
- let i=musicStep%tune.length;
- musicTone(tune[i],.18,.052);
- if(i%2===0)musicTone(thirds[(i/2)%thirds.length],.12,.020,.055);
- if(i%4===3)musicTone(tune[(i+1)%tune.length]*2,.08,.012,.10);
- musicStep++;
-}
-function startAmbience(){if(!S.ambienceOn)return;stopAmbience();audioCtx();ambienceNodes=[];musicStep=0;playMusicPhrase();musicTimer=setInterval(playMusicPhrase,215)}
-function updateSoundUI(){let a=document.getElementById('soundToggle'),b=document.getElementById('ambienceToggle');if(a){a.classList.toggle('on',!!S.soundOn);a.textContent=S.soundOn?'🔊 Effects On':'🔇 Effects Off'}if(b){b.classList.toggle('on',!!S.ambienceOn);b.textContent=S.ambienceOn?'🎻 Music On':'🎻 Music Off'}}
+function playMusicPhrase(){return}
+function startAmbience(){stopAmbience()}
+function updateSoundUI(){let a=document.getElementById('soundToggle'),b=document.getElementById('ambienceToggle');if(a){a.classList.toggle('on',!!S.soundOn);a.textContent=S.soundOn?'🔊 Effects On':'🔇 Effects Off'}if(b){b.classList.toggle('on',!!S.ambienceOn);b.textContent=S.ambienceOn?'🎶 Happy Music (track needed)':'🎶 Music Off'}}
 function toggleSound(){S.soundOn=!S.soundOn;if(S.soundOn)sfx('click');save();updateSoundUI()}
-function toggleAmbience(){audioCtx();S.ambienceOn=!S.ambienceOn;if(S.ambienceOn)startAmbience();else stopAmbience();save();updateSoundUI()}
-document.addEventListener('pointerdown',()=>{audioCtx();if(S.ambienceOn&&ambienceNodes.length===0)startAmbience()},{once:true});
+function toggleAmbience(){S.ambienceOn=!S.ambienceOn;stopAmbience();save();updateSoundUI()}
+
 
 const FITNESS_URL='https://ilmjnptsepcztzwnvrap.supabase.co/functions/v1/tavern-fitness';
 function isoDate(d){return d.toISOString().slice(0,10)}
@@ -292,10 +281,13 @@ function questGroup(category,bucket,open=false){
  let rows=S.quests.map((q,i)=>({q,i})).filter(x=>(x.q.category||inferQuestCategory(x.q))===category&&(x.q.bucket||inferQuestBucket(x.q))===bucket);
  return `<details class="questdrop" ${open?'open':''}><summary><span>${bucket}</span><span class="questcount">${rows.length} tasks</span></summary><div class="questdropbody">${rows.length?rows.map(x=>questCard(x.q,x.i)).join(''):`<div class="small" style="padding:10px">No tasks in this group yet.</div>`}</div></details>`;
 }
+function questCategory(category,icon,open=false){
+ return `<details class="panel" ${open?'open':''} style="padding:0;overflow:hidden"><summary style="cursor:pointer;list-style:none;padding:18px;font-size:22px;font-weight:bold;color:#f6d58a;display:flex;justify-content:space-between"><span>${icon} ${category}</span><span>▾</span></summary><div style="padding:0 12px 12px">${questGroup(category,'Today',true)}${questGroup(category,'Weekly')}${questGroup(category,'Monthly')}${questGroup(category,'As You Can')}</div></details>`;
+}
 function questBoard(){
  let E=S.editing,eq=E==='new'?{t:'',task:'',xp:10,bucket:'Today',category:'Household',assigned:'Either'}:(typeof E==='number'?S.quests[E]:null);
  let editor=eq?`<div class="editor"><div class="ey">${E==='new'?'Create a household quest':'Edit household quest'}</div><div class="editorgrid"><div><span class="label">Fantasy title</span><input id="qt" value="${(eq.t||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"><span class="label">Actual chore</span><textarea id="qtask">${eq.task||''}</textarea></div><div><span class="label">XP reward</span><input id="qxp" type="number" min="1" value="${eq.xp||10}"><span class="label">Category</span><select id="qcategory" class="select"><option ${((eq.category||inferQuestCategory(eq))==='Household')?'selected':''}>Household</option><option ${((eq.category||inferQuestCategory(eq))==='Pets')?'selected':''}>Pets</option></select><span class="label">Due</span><select id="qbucket" class="select">${['Today','Weekly','Monthly','As You Can'].map(x=>`<option ${((eq.bucket||inferQuestBucket(eq))===x)?'selected':''}>${x}</option>`).join('')}</select><span class="label">Assigned to</span><select id="qassigned" class="select"><option value="Either" ${eq.assigned==='Either'?'selected':''}>Either player</option><option value="0" ${eq.assigned==='0'?'selected':''}>${S.players[0].name}</option><option value="1" ${eq.assigned==='1'?'selected':''}>${S.players[1].name}</option></select></div></div><div class="toolbar" style="margin-top:12px"><button class="btn" onclick="storeQuest(${E==='new'?"'new'":E})">Save Quest</button><button class="btn subtle" onclick="cancelQuest()">Cancel</button>${E!=='new'?`<button class="btn subtle delete" onclick="removeQuest(${E})">Delete</button>`:''}</div></div>`:'';
- return `<div class="row"><div><div class="ey">Pinned beside the hearth</div><h2>Quest Board</h2><div class="small">${S.quests.length} quests • Household first • Together splits XP 50/50</div></div><div class="toolbar"><span class="small">Encounter progress: ${Math.min(S.choreCount||0,3)} / 3 chores</span><button class="btn" onclick="addQuest()">+ Add Quest</button></div></div>${editor}<div class="questgroups"><section class="questcat"><h2>🏠 Household</h2>${questGroup('Household','Today',true)}${questGroup('Household','Weekly')}${questGroup('Household','Monthly')}${questGroup('Household','As You Can')}</section><section class="questcat"><h2>🐾 Pets</h2>${questGroup('Pets','Today',true)}${questGroup('Pets','Weekly')}${questGroup('Pets','Monthly')}${questGroup('Pets','As You Can')}</section></div>`;
+ return `<div class="row"><div><div class="ey">Pinned beside the hearth</div><h2>Quest Board</h2><div class="small">${S.quests.length} quests • Open a category, then choose when it is due</div></div><div class="toolbar"><span class="small">Encounter progress: ${Math.min(S.choreCount||0,3)} / 3 chores</span><button class="btn" onclick="addQuest()">+ Add Quest</button></div></div>${editor}<div class="questgroups">${questCategory('Household','🏠',true)}${questCategory('Pets','🐾',false)}</div>`;
 }
 function render(){nav();let h=rewardUI();if(S.tab==='Tavern')h+=`<div class="panel"><div class="ey">Tonight at the Hearth</div><h2>Your next chapter awaits.</h2><p>Complete real household chores for XP. Walking moves the party toward the next boss. Classes, equipment, spells and earned companions affect combat.</p></div><div class="grid">${card(S.players[0],0)}${card(S.players[1],1)}</div>`;
 if(S.tab==='Quest Board')h+=questBoard();
